@@ -2,9 +2,19 @@
 
 import argparse
 import json
+import logging
+import shlex
+import subprocess
 from pathlib import Path
-from subprocess import PIPE, run
 from time import time
+
+logger = logging.getLogger(__name__)
+
+
+def run(cmd: list, **kwargs):
+    logger.debug("Executing {}".format(shlex.join(cmd)))
+
+    return subprocess.run(cmd, check=True, text=True, **kwargs)
 
 
 def main():
@@ -15,13 +25,20 @@ def main():
     )  # Base image for "new", or existing image for "extract"
     parser.add_argument("name")
     parser.add_argument("--version")
+    parser.add_argument(
+        "--log-level",
+        default="WARNING",
+        choices=("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"),
+        help="log level",
+    )
+
     args = parser.parse_args()
+
+    logging.basicConfig(level=args.log_level)
 
     p = run(
         ["skopeo", "inspect", f"docker://{args.image}"],
-        stdout=PIPE,
-        check=True,
-        text=True,
+        stdout=subprocess.PIPE,
     )
 
     image_metadata = json.loads(p.stdout)
@@ -59,16 +76,14 @@ def main():
             immutable_image,
             "/get-dnf-cache.sh",
         ],
-        stdout=PIPE,
-        check=True,
-        text=True,
+        stdout=subprocess.PIPE,
     )
 
     container_id = p.stdout.rstrip()
 
-    run(["podman", "cp", "get-dnf-cache.sh", f"{container_id}:/"], check=True)
+    run(["podman", "cp", "get-dnf-cache.sh", f"{container_id}:/"])
 
-    run(["podman", "start", "-a", container_id], check=True)
+    run(["podman", "start", "-a", container_id])
 
     try:
         cache_dir = Path("dnf-cache")
@@ -82,12 +97,11 @@ def main():
                 "podman",
                 "cp",
                 f"{container_id}:/build/dnf-cache.tar.gz",
-                tarball_file,
+                str(tarball_file),
             ],
-            check=True,
         )
     finally:
-        run(["podman", "rm", container_id], check=True)
+        run(["podman", "rm", container_id])
 
     metadata_file = cache_dir.joinpath(f"{args.name}.json")
 

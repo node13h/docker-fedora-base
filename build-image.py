@@ -2,16 +2,35 @@
 
 import argparse
 import json
+import logging
 import os
+import shlex
+import subprocess
 from pathlib import Path
-from subprocess import PIPE, run
+
+logger = logging.getLogger(__name__)
+
+
+def run(cmd: list, **kwargs):
+    logger.debug("Executing {}".format(shlex.join(cmd)))
+
+    return subprocess.run(cmd, check=True, text=True, **kwargs)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("image_name")
     parser.add_argument("cache_name")
+    parser.add_argument(
+        "--log-level",
+        default="WARNING",
+        choices=("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"),
+        help="log level",
+    )
+
     args = parser.parse_args()
+
+    logging.basicConfig(level=args.log_level)
 
     cache_dir = Path("dnf-cache")
 
@@ -22,7 +41,7 @@ def main():
 
     os.environ["SOURCE_DATE_EPOCH"] = str(metadata["epoch"])
 
-    p = run(["git", "rev-parse", "HEAD"], stdout=PIPE, check=True, text=True)
+    p = run(["git", "rev-parse", "HEAD"], stdout=subprocess.PIPE)
 
     vcs_ref = p.stdout.rstrip()
 
@@ -54,8 +73,7 @@ def main():
             "-t",
             "{}:{}-{}".format(args.image_name, metadata["version"], metadata["epoch"]),
             ".",
-        ],
-        check=True,
+        ]
     )
 
 

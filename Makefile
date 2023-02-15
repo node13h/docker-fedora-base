@@ -7,12 +7,12 @@ IMAGE_NAME := docker.io/alikov/fedora-base
 .PHONY: dnf-cache build clean
 
 dnf-cache/fedora-$(FEDORA_VERSION)-$(ARCH).json:
-	./dnf-cache.py --version $(FEDORA_VERSION) new $(FEDORA_IMAGE):$(FEDORA_VERSION) fedora-$(FEDORA_VERSION)-$(ARCH)
+	./dnf-cache.py --log-level DEBUG --version $(FEDORA_VERSION) new $(FEDORA_IMAGE):$(FEDORA_VERSION) fedora-$(FEDORA_VERSION)-$(ARCH)
 
 dnf-cache: dnf-cache/fedora-$(FEDORA_VERSION)-$(ARCH).json
 
 build: dnf-cache/fedora-$(FEDORA_VERSION)-$(ARCH).json
-	./build-image.py $(IMAGE_NAME) fedora-$(FEDORA_VERSION)-$(ARCH)
+	./build-image.py --log-level DEBUG $(IMAGE_NAME) fedora-$(FEDORA_VERSION)-$(ARCH)
 
 clean:
 	rm -rf dnf-cache
