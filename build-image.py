@@ -21,6 +21,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("image_name")
     parser.add_argument("cache_name")
+    parser.add_argument("--push", action="store_true", default=False)
+    parser.add_argument("--output-file", type=Path, help="output JSON file path")
     parser.add_argument(
         "--log-level",
         default="WARNING",
@@ -47,6 +49,8 @@ def main():
 
     cache_tarball_file = cache_dir.joinpath(f"{args.cache_name}.tar.gz")
 
+    image = "{}:{}-{}".format(args.image_name, metadata["version"], metadata["epoch"])
+
     run(
         [
             "podman",
@@ -71,10 +75,19 @@ def main():
             "--format",
             "oci",
             "-t",
-            "{}:{}-{}".format(args.image_name, metadata["version"], metadata["epoch"]),
+            image,
             ".",
         ]
     )
+
+    if args.push:
+        run(["podman", "push", image])
+
+    metadata = {"image": image}
+
+    if args.output_file:
+        with open(args.output_file, "w") as f:
+            f.write(json.dumps(metadata, sort_keys=True, indent=2))
 
 
 if __name__ == "__main__":
