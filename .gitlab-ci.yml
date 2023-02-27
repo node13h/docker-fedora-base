@@ -40,6 +40,24 @@ build-amd64-36:
     FEDORA_VERSION: "36"
     ARCH: amd64
 
+build-arm64-37:
+  tags:
+    - podman
+    - arm64
+  extends: .build
+  variables:
+    FEDORA_VERSION: "37"
+    ARCH: arm64
+
+build-arm64-36:
+  tags:
+    - podman
+    - arm64
+  extends: .build
+  variables:
+    FEDORA_VERSION: "36"
+    ARCH: arm64
+
 .make-manifest-list:
   stage: manifest-list
   tags:
@@ -49,6 +67,7 @@ build-amd64-36:
     - podman manifest rm "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" || true
     - podman manifest create "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}"
     - podman manifest add "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "docker://$(jq -er .image <"ci/tmp/amd64-${FEDORA_VERSION}.json")"
+    - podman manifest add "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "docker://$(jq -er .image <"ci/tmp/arm64-${FEDORA_VERSION}.json")"
     - podman manifest push "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "docker://${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}"
 
 make-manifest-list-37:
@@ -57,6 +76,7 @@ make-manifest-list-37:
     FEDORA_VERSION: "37"
   needs:
     - build-amd64-37
+    - build-arm64-37
 
 make-manifest-list-36:
   extends: .make-manifest-list
@@ -64,3 +84,4 @@ make-manifest-list-36:
     FEDORA_VERSION: "36"
   needs:
     - build-amd64-36
+    - build-arm64-36
