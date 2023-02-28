@@ -6,82 +6,118 @@ stages:
   - build
   - manifest-list
 
-.build:
-  stage: build
+.check-updates:
+  tags:
+    - podman
+    - $ARCH
+  stage: .pre
+  variables:
+    ENV_FILENAME: "check-updates-${ARCH}-${FEDORA_VERSION}.env"
   script:
-    - rm -rf dnf-cache ci/tmp
-    - mkdir -p ci/tmp
-    - ./dnf-cache.py --log-level DEBUG --version "$FEDORA_VERSION" new "registry.fedoraproject.org/fedora:${FEDORA_VERSION}" "fedora-${ARCH}-${FEDORA_VERSION}"
-    - ./build-image.py --log-level DEBUG --push --output-file "ci/tmp/${ARCH}-${FEDORA_VERSION}.json" "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base-${ARCH}" "fedora-${ARCH}-${FEDORA_VERSION}"
+    - ./dnf-update-flags.py --var-prefix "${ARCH}_" "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "$ENV_FILENAME"
+    - cat "$ENV_FILENAME"
+  artifacts:
+    reports:
+      dotenv: $ENV_FILENAME
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+.build:
+  tags:
+    - podman
+    - $ARCH
+  stage: build
+  variables:
+    OUTPUT_METADATA_FILE: "ci/tmp/${ARCH}-${FEDORA_VERSION}.json"
+  script:
+    - ./ci/scripts/skip-build.sh || ./ci/scripts/build.sh
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - when: manual
       allow_failure: true
+      variables:
+        FORCE_BUILD: "1"
   artifacts:
     paths:
-      - "ci/tmp/${ARCH}-${FEDORA_VERSION}.json"
+      - $OUTPUT_METADATA_FILE
     expire_in: 1 day
-
-build-amd64-37:
-  tags:
-    - podman
-    - amd64
-  extends: .build
-  variables:
-    FEDORA_VERSION: "37"
-    ARCH: amd64
-
-build-amd64-36:
-  tags:
-    - podman
-    - amd64
-  extends: .build
-  variables:
-    FEDORA_VERSION: "36"
-    ARCH: amd64
-
-build-arm64-37:
-  tags:
-    - podman
-    - arm64
-  extends: .build
-  variables:
-    FEDORA_VERSION: "37"
-    ARCH: arm64
-
-build-arm64-36:
-  tags:
-    - podman
-    - arm64
-  extends: .build
-  variables:
-    FEDORA_VERSION: "36"
-    ARCH: arm64
 
 .make-manifest-list:
   stage: manifest-list
   tags:
     - podman
     - amd64
+  variables:
+    AMD64_METADATA_FILE: "ci/tmp/amd64-${FEDORA_VERSION}.json"
+    ARM64_METADATA_FILE: "ci/tmp/arm64-${FEDORA_VERSION}.json"
   script:
-    - podman manifest rm "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" || true
-    - podman manifest create "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}"
-    - podman manifest add "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "docker://$(jq -er .image <"ci/tmp/amd64-${FEDORA_VERSION}.json")"
-    - podman manifest add "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "docker://$(jq -er .image <"ci/tmp/arm64-${FEDORA_VERSION}.json")"
-    - podman manifest push "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "docker://${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}"
+    - ./ci/scripts/skip-build.sh || ./ci/scripts/make-manifest-list.sh
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - when: manual
+      allow_failure: true
+      variables:
+        FORCE_BUILD: "1"
+  dependencies:
+    - "check-updates/${FEDORA_VERSION}"
+    - "build/${FEDORA_VERSION}"
 
-make-manifest-list-37:
-  extends: .make-manifest-list
+check-updates-36:
+  extends: .check-updates
+  variables:
+    FEDORA_VERSION: "36"
+  parallel:
+    matrix:
+      - ARCH:
+        - "amd64"
+        - "arm64"
+
+check-updates-37:
+  extends: .check-updates
   variables:
     FEDORA_VERSION: "37"
-  needs:
-    - build-amd64-37
-    - build-arm64-37
+  parallel:
+    matrix:
+      - ARCH:
+        - "amd64"
+        - "arm64"
+
+build-36:
+  extends: .build
+  variables:
+    FEDORA_VERSION: "36"
+  parallel:
+    matrix:
+      - ARCH:
+        - "amd64"
+        - "arm64"
+  dependencies:
+    - check-updates-36
+
+build-37:
+  extends: .build
+  variables:
+    FEDORA_VERSION: "37"
+  parallel:
+    matrix:
+      - ARCH:
+        - "amd64"
+        - "arm64"
+  dependencies:
+    - check-updates-37
 
 make-manifest-list-36:
   extends: .make-manifest-list
   variables:
     FEDORA_VERSION: "36"
-  needs:
-    - build-amd64-36
-    - build-arm64-36
+  dependencies:
+    - check-updates-36
+    - build-36
+
+make-manifest-list-37:
+  extends: .make-manifest-list
+  variables:
+    FEDORA_VERSION: "37"
+  dependencies:
+    - check-updates-37
+    - build-37
