@@ -31,7 +31,7 @@ The following example assumes `x86_64` architecture.
 ```sh
 make clean dnf-cache \
   FEDORA_IMAGE=docker.io/alikov/fedora-base-amd64 \
-  FEDORA_VERSION=37-1677710279 \
+  FEDORA_VERSION=37-1677792385 \
   CACHE_OP=extract
 ```
 This will save a tarball with DNF cache in `dnf-cache/fedora-37-x86_64.tar.gz`
@@ -49,6 +49,6 @@ On the destination machine:
 - Run `dnf update`.
 
 That's it. Later on you can check if there are any updates available _locally_
-by starting a container using `docker.io/alikov/fedora-base-amd64:37-1677710279`,
+by starting a container using `docker.io/alikov/fedora-base-amd64:37-1677792385`,
 installing same packages as on the native machine, then executing
 `dnf makecache && dnf check-update` in that container.
