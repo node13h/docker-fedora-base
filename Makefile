@@ -2,7 +2,7 @@ FEDORA_VERSION := 37
 FEDORA_IMAGE := registry.fedoraproject.org/fedora:$(FEDORA_VERSION)
 # Assume host arch is the same as build arch.
 ARCH := $(shell arch)
-IMAGE_NAME := fedora-base
+IMAGE_NAME := docker.io/alikov/fedora-base-$(ARCH)
 CACHE_OP := new
 
 .PHONY: dnf-cache build clean

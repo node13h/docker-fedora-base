@@ -62,10 +62,6 @@ The following example will reproduce
 will be used as DNF the cache source.
 
 ```sh
-# Save the existing image digest for later comparison.
-ORIGINAL_DIGEST=$(skopeo inspect docker://docker.io/alikov/fedora-base-x86_64:37-1677955848 \
-                    | jq -re .Digest)
-
 # Check out the same Git commit as the image was built from.
 GIT_SHA=$(skopeo inspect docker://docker.io/alikov/fedora-base-x86_64:37-1677955848 \
             | jq -er '.Labels."com.alikov.image.ref"')
@@ -82,12 +78,13 @@ make clean dnf-cache \
 podman image prune --all --force
 
 # Build.
-make build IMAGE_NAME=docker.io/alikov/fedora-base-x86_64
+make build
 
-BUILD_DIGEST=$(skopeo inspect containers-storage:docker.io/alikov/fedora-base-x86_64:37-1677955848 \
-                 | jq -re .Digest)
+# Get image ID, which is a hash of local image configuration.
+IID=$(podman image inspect --format '{{ .Id }}' docker.io/alikov/fedora-base-x86_64:37-1677955848)
 
-if [ -n "$ORIGINAL_DIGEST" ] && [ "$ORIGINAL_DIGEST" = "$BUILD_DIGEST" ]; then
-  echo Image digests match!
+# Check if the ID is the same as the original one.
+if [ "$IID" = '9183e087a4d843c566a910ab89a39ef0edf8c2a2ab12f5378daafa6f0e68943e' ]; then
+  echo 'Great success! :)'
 fi
 ```
