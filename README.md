@@ -30,8 +30,7 @@ The following example assumes `x86_64` architecture.
 
 ```sh
 make clean dnf-cache \
-  FEDORA_IMAGE=docker.io/alikov/fedora-base-amd64 \
-  FEDORA_VERSION=37-1677792385 \
+  FEDORA_IMAGE=docker.io/alikov/fedora-base-x86_64:37-1677949231 \
   CACHE_OP=extract
 ```
 This will save a tarball with DNF cache in `dnf-cache/fedora-37-x86_64.tar.gz`
@@ -49,6 +48,46 @@ On the destination machine:
 - Run `dnf update`.
 
 That's it. Later on you can check if there are any updates available _locally_
-by starting a container using `docker.io/alikov/fedora-base-amd64:37-1677792385`,
+by starting a container using `docker.io/alikov/fedora-base-x86_64:37-1677949231`,
 installing same packages as on the native machine, then executing
 `dnf makecache && dnf check-update` in that container.
+
+
+## Reproducing a build
+
+This is only going to work with Fedora 37 or later.
+
+The following example will reproduce
+`docker.io/alikov/fedora-base-x86_64:37-1677949231` locally. The existing image
+will be used as DNF the cache source.
+
+```sh
+# Save the existing image digest for later comparison.
+ORIGINAL_DIGEST=$(skopeo inspect docker://docker.io/alikov/fedora-base-x86_64:37-1677949231 \
+                    | jq -re .Digest)
+
+# Check out the same Git commit as the image was built from.
+GIT_SHA=$(skopeo inspect docker://docker.io/alikov/fedora-base-x86_64:37-1677949231 \
+            | jq -er '.Labels."com.alikov.image.ref"')
+git checkout "$GIT_SHA"
+
+# Fetch the DNF cache and some metadata (timestamp, base image, version) from the
+# existing image.
+make clean dnf-cache \
+  FEDORA_IMAGE=docker.io/alikov/fedora-base-x86_64:37-1677949231 \
+  CACHE_OP=extract
+
+# Remove all images, otherwise some existing layers might get reused and affect
+# the build purity.
+podman image prune --all --force
+
+# Build.
+make build IMAGE_NAME=docker.io/alikov/fedora-base-x86_64
+
+BUILD_DIGEST=$(skopeo inspect containers-storage:docker.io/alikov/fedora-base-x86_64:37-1677949231 \
+                 | jq -re .Digest)
+
+if [ -n "$ORIGINAL_DIGEST" ] && [ "$ORIGINAL_DIGEST" = "$BUILD_DIGEST" ]; then
+  echo Image digests match!
+fi
+```
