@@ -3,6 +3,7 @@ variables:
   IMAGE_NAMESPACE: alikov
 
 stages:
+  - clean
   - build
   - manifest-list
 
@@ -61,6 +62,26 @@ stages:
   dependencies:
     - "check-updates/${FEDORA_VERSION}"
     - "build/${FEDORA_VERSION}"
+
+# Ensure there are no existing layers on the builder. Existing layers when used
+# as cache will retain their previous timestamp resulting in non-reproduible
+# builds.
+clean:
+  tags:
+    - podman
+    - $ARCH
+  stage: clean
+  script:
+    - podman image prune --all --force
+  parallel:
+    matrix:
+      - ARCH:
+        - "x86_64"
+        - "aarch64"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - when: manual
+      allow_failure: true
 
 check-updates-36:
   extends: .check-updates
