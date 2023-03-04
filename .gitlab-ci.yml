@@ -12,7 +12,7 @@ stages:
     - $ARCH
   stage: .pre
   variables:
-    ENV_FILENAME: "check-updates-${ARCH}-${FEDORA_VERSION}.env"
+    ENV_FILENAME: "check-updates-${FEDORA_VERSION}-${ARCH}.env"
   script:
     - ./dnf-update-flags.py --var-prefix "${ARCH}_" "${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}" "$ENV_FILENAME"
     - cat "$ENV_FILENAME"
@@ -28,7 +28,7 @@ stages:
     - $ARCH
   stage: build
   variables:
-    OUTPUT_METADATA_FILE: "ci/tmp/${ARCH}-${FEDORA_VERSION}.json"
+    OUTPUT_METADATA_FILE: "ci/tmp/${FEDORA_VERSION}-${ARCH}.json"
   script:
     - ./ci/scripts/skip-build.sh || ./ci/scripts/build.sh
   rules:
@@ -46,10 +46,10 @@ stages:
   stage: manifest-list
   tags:
     - podman
-    - amd64
+    - x86_64
   variables:
-    AMD64_METADATA_FILE: "ci/tmp/amd64-${FEDORA_VERSION}.json"
-    ARM64_METADATA_FILE: "ci/tmp/arm64-${FEDORA_VERSION}.json"
+    AMD64_METADATA_FILE: "ci/tmp/${FEDORA_VERSION}-x86_64.json"
+    ARM64_METADATA_FILE: "ci/tmp/${FEDORA_VERSION}-aarch64.json"
   script:
     - ./ci/scripts/skip-build.sh || ./ci/scripts/make-manifest-list.sh
   rules:
@@ -69,8 +69,8 @@ check-updates-36:
   parallel:
     matrix:
       - ARCH:
-        - "amd64"
-        - "arm64"
+        - "x86_64"
+        - "aarch64"
 
 check-updates-37:
   extends: .check-updates
@@ -79,8 +79,8 @@ check-updates-37:
   parallel:
     matrix:
       - ARCH:
-        - "amd64"
-        - "arm64"
+        - "x86_64"
+        - "aarch64"
 
 build-36:
   extends: .build
@@ -89,8 +89,8 @@ build-36:
   parallel:
     matrix:
       - ARCH:
-        - "amd64"
-        - "arm64"
+        - "x86_64"
+        - "aarch64"
   dependencies:
     - check-updates-36
 
@@ -101,8 +101,8 @@ build-37:
   parallel:
     matrix:
       - ARCH:
-        - "amd64"
-        - "arm64"
+        - "x86_64"
+        - "aarch64"
   dependencies:
     - check-updates-37
 
