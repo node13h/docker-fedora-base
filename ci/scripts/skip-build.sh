@@ -6,11 +6,11 @@ if [ "${FORCE_BUILD:-}" = "1" ]; then
     exit 1
 fi
 
-if [ "${amd64_DNF_SECURITY_UPDATES:-}" = "1" ]; then
+if [ "${x86_64_DNF_SECURITY_UPDATES:-}" = "1" ]; then
     exit 1
 fi
 
-if [ "${arm64_DNF_SECURITY_UPDATES:-}" = "1" ]; then
+if [ "${aarch64_DNF_SECURITY_UPDATES:-}" = "1" ]; then
     exit 1
 fi
 
