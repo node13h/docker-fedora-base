@@ -5,7 +5,7 @@ set -eux
 MANIFEST="${CONTAINER_REGISTRY}/${IMAGE_NAMESPACE%/}/fedora-base:${FEDORA_VERSION}"
 
 if podman image exists "$MANIFEST"; then
-    podman image rm "$MANIFEST"
+    podman image rm -f "$MANIFEST"
 fi
 
 if podman manifest exists "$MANIFEST"; then
