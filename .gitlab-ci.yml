@@ -103,6 +103,16 @@ check-updates-37:
         - "x86_64"
         - "aarch64"
 
+check-updates-38:
+  extends: .check-updates
+  variables:
+    FEDORA_VERSION: "38"
+  parallel:
+    matrix:
+      - ARCH:
+        - "x86_64"
+        - "aarch64"
+
 build-36:
   extends: .build
   variables:
@@ -127,6 +137,18 @@ build-37:
   dependencies:
     - check-updates-37
 
+build-38:
+  extends: .build
+  variables:
+    FEDORA_VERSION: "38"
+  parallel:
+    matrix:
+      - ARCH:
+        - "x86_64"
+        - "aarch64"
+  dependencies:
+    - check-updates-38
+
 make-manifest-list-36:
   extends: .make-manifest-list
   variables:
@@ -142,3 +164,11 @@ make-manifest-list-37:
   dependencies:
     - check-updates-37
     - build-37
+
+make-manifest-list-38:
+  extends: .make-manifest-list
+  variables:
+    FEDORA_VERSION: "38"
+  dependencies:
+    - check-updates-38
+    - build-38
